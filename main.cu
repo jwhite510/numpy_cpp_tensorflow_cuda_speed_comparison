@@ -28,7 +28,8 @@ void cpu_add(int n,float *x, float*y){
 
 int main(void)
 {
-  int N = 1<<20;
+  // int N = 1<<20;
+  int N = 1048576;
   float *x, *y;
 
   // Allocate Unified Memory – accessible from CPU or GPU
@@ -50,12 +51,14 @@ int main(void)
     y_c[i]=1.0f;
   }
 
-  auto start=high_resolution_clock::now();
-  cpu_add(N,x_c,y_c);
-  auto stop=high_resolution_clock::now();
-  auto duration=duration_cast<milliseconds>(stop-start);
+  for(int i=0;i<20;i++){
+    auto start=high_resolution_clock::now();
+    cpu_add(N,x_c,y_c);
+    auto stop=high_resolution_clock::now();
+    auto duration=duration_cast<microseconds>(stop-start);
+    cout<<"CPU duration:"<<duration.count()<<endl;
+  }
 
-  cout<<"CPU duration:"<<duration.count()<<endl;
   cout<<"y_c:"<<endl;
   for(int i=0; i<10; i++) {
     cout<<y_c[i]<<" ";
@@ -65,21 +68,23 @@ int main(void)
     cout<<x_c[i]<<" ";
   }cout<<endl;
 
-
   // Run kernel on 1M elements on the GPU
-  start=high_resolution_clock::now();
+  for(int i=0; i <20 ; i++){
+    auto start=high_resolution_clock::now();
 
-  int blockSize=256;
-  int numBlocks=(N+blockSize-1)/blockSize;
-  cout<<"numBlocks"<<numBlocks<<endl;
-  add<<<numBlocks, blockSize>>>(N, x, y);
-  // add<<<1, 256>>>(N, x, y);
-  // Wait for GPU to finish before accessing on host
-  cudaDeviceSynchronize();
-  stop=high_resolution_clock::now();
-  duration=duration_cast<milliseconds>(stop-start);
+    int blockSize=256;
+    int numBlocks=(N+blockSize-1)/blockSize;
+    // cout<<"numBlocks"<<numBlocks<<endl;
+    add<<<numBlocks, blockSize>>>(N, x, y);
+    // add<<<1, 256>>>(N, x, y);
+    // Wait for GPU to finish before accessing on host
+    cudaDeviceSynchronize();
 
-  cout<<"GPU duration:"<<duration.count()<<endl;
+    auto stop=high_resolution_clock::now();
+    auto duration=duration_cast<microseconds>(stop-start);
+    cout<<"GPU duration:"<<duration.count()<<endl;
+  }
+
   // Check for errors (all values should be 3.0f)
   cout<<"y:"<<endl;
   for(int i=0; i<10; i++) {
