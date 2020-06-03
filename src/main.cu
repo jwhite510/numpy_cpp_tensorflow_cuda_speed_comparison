@@ -11,11 +11,15 @@ void print10(float* s){
   }cout<<endl;
 }
 // Kernel function to add the elements of two arrays
-typedef struct{
+struct array2d{
   int width;
   int height;
   float* data;
-} array2d;
+  array2d(int width,int height):width(width),height(height){
+    cudaMallocManaged(&data,width*height*sizeof(float));
+  }
+
+};
 
 __global__
 void add(array2d arr1, array2d arr2)
@@ -35,16 +39,9 @@ void add(array2d arr1, array2d arr2)
 int main(void)
 {
   int N = 10;
-  array2d arr1;
-  arr1.width=N;
-  arr1.height=N;
+  array2d arr1(N,N);
 
-  array2d arr2;
-  arr2.width=N;
-  arr2.height=N;
-
-  cudaMallocManaged(&arr1.data,N*N*sizeof(float));
-  cudaMallocManaged(&arr2.data,N*N*sizeof(float));
+  array2d arr2(N,N);
 
   // initialize x and y arrays on the host
   for (int i = 0; i < N*N; i++) {
