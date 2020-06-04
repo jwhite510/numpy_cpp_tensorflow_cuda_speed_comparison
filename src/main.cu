@@ -30,25 +30,11 @@ struct array3d{
   int length;
   float* h_data;
   float* d_data;
-  array3d(int size_0,int size_1, int size_2)
-    :size_0(size_0),size_1(size_1),size_2(size_2)
-  {
-    length=size_0*size_1*size_2;
-    // allocate memory on device
-    cudaMalloc(&d_data,length*sizeof(float));
-    // allocate memory on host
-    h_data = new float[length];
-    // cudaMallocManaged(&data,length*sizeof(float));
-  }
   void CopyToHost(){
     cudaMemcpy(h_data,d_data,length*sizeof(float),cudaMemcpyDeviceToHost);
   }
   void CopyToDevice(){
     cudaMemcpy(d_data,h_data,length*sizeof(float),cudaMemcpyHostToDevice);
-  }
-  ~array3d(){
-    delete [] h_data;
-    cudaFree(d_data);
   }
   void show(){
     for(int _i0=0; _i0 < size_0; _i0++){
@@ -62,18 +48,39 @@ struct array3d{
   }
 
 };
+void construct(array3d &arr, int size_0,int size_1, int size_2)
+{
+  arr.size_0=size_0;
+  arr.size_1=size_1;
+  arr.size_2=size_2;
+  arr.length=size_0*size_1*size_2;
+  // allocate memory on device
+  cudaMalloc(&arr.d_data,arr.length*sizeof(float));
+  // allocate memory on host
+  arr.h_data = new float[arr.length];
+}
+void ToDevice(array3d &arr){
+  cudaMemcpy(arr.d_data,arr.h_data,arr.length*sizeof(float),cudaMemcpyHostToDevice);
+}
+void ToHost(array3d &arr){
+  cudaMemcpy(arr.h_data,arr.d_data,arr.length*sizeof(float),cudaMemcpyDeviceToHost);
+}
+void destruct(array3d &arr){
+  delete [] arr.h_data;
+  cudaFree(arr.d_data);
+}
 __device__
-float GetElement(const array3d &arr, int i_0,int i_1,int i_2)
+float GetElement(const array3d arr, int i_0,int i_1,int i_2)
 {
   return arr.d_data[i_0*arr.size_1*arr.size_2 + i_1*arr.size_2 + i_2];
 }
-__device__ void SetElement(array3d &arr, int i_0, int i_1, int i_2, float value)
+__device__ void SetElement(array3d arr, int i_0, int i_1, int i_2, float value)
 {
   arr.d_data[i_0*arr.size_1*arr.size_2 + i_1*arr.size_2 + i_2]=value;
 }
 
 __global__
-void add(array3d &arr1, array3d &arr2)
+void add(array3d arr1, array3d arr2)
 {
   int index=blockIdx.x*blockDim.x+threadIdx.x;
   int stride=blockDim.x*gridDim.x;
@@ -85,10 +92,9 @@ void add(array3d &arr1, array3d &arr2)
     int _i_ur_2=i%arr1.size_2;
 
     float e=GetElement(arr1,_i_ur_0,_i_ur_1,_i_ur_2);
-    arr2.d_data[i]=i;
-    // if(_i_ur_1+1<arr2.size_1)
-      // SetElement(arr2,_i_ur_0,_i_ur_1+1,_i_ur_2, e);
-    SetElement(arr2,_i_ur_0,_i_ur_1,_i_ur_2, i);
+    if(_i_ur_1+1<arr2.size_1)
+      SetElement(arr2,_i_ur_0,_i_ur_1+1,_i_ur_2, e);
+    // SetElement(arr2,_i_ur_0,_i_ur_1,_i_ur_2, i);
 
   }
 }
@@ -96,8 +102,10 @@ int main(void)
 {
 
   int N = 3;
-  array3d arr1(N,N,10);
-  array3d arr2(N,N,10);
+  array3d arr1;
+  construct(arr1, N,N,10);
+  array3d arr2;
+  construct(arr2, N,N,10);
 
   // initialize x and y arrays on the host
   int val=0;
@@ -105,14 +113,20 @@ int main(void)
     arr1.h_data[i] = val++;
     arr2.h_data[i] = 0.0f;
   }
+
+  // ToDevice(arr1);
+  // ToDevice(arr2);
   arr1.CopyToDevice();
   arr2.CopyToDevice();
   int blockSize=256;
-  int numBlocks=(N*N+blockSize-1)/blockSize;
+  int numBlocks=(arr1.length+blockSize-1)/blockSize;
   cout << "numBlocks => " << numBlocks << endl;
+
   add<<<numBlocks, blockSize>>>(arr1, arr2);
 
-  cudaDeviceSynchronize();
+  // copy to host
+  // ToHost(arr1);
+  // ToHost(arr2);
   arr1.CopyToHost();
   arr2.CopyToHost();
 
@@ -121,5 +135,8 @@ int main(void)
   arr1.show();
   cout<<"arr2:"<<endl;
   arr2.show();
+
+  destruct(arr1);
+  destruct(arr2);
   return 0;
 }
