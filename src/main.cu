@@ -72,40 +72,46 @@ __device__ void SetElement(array3d &arr, int i_0, int i_1, int i_2, float value)
   arr.d_data[i_0*arr.size_1*arr.size_2 + i_1*arr.size_2 + i_2]=value;
 }
 
+struct Myarray{
+  int N;
+  float* h_array;
+  float* d_array;
+};
+
 __global__
-void add(int N,float* d_array)
+void add(Myarray arr)
 {
   int index=blockIdx.x*blockDim.x+threadIdx.x;
   int stride=blockDim.x*gridDim.x;
-  for(int i=index; i < N; i+=stride){
-    d_array[i]=2*d_array[i];
+  for(int i=index; i < arr.N; i+=stride){
+    arr.d_array[i]=2*arr.d_array[i];
   }
 }
 int main(void)
 {
 
-  int N=100;
-  float* h_array= new float[N];
-  float* d_array;
-  cudaMalloc(&d_array,N*sizeof(float));
+  Myarray myarray;
+  myarray.N=100;
+  myarray.h_array=new float[myarray.N];
+  cudaMalloc(&myarray.d_array,myarray.N*sizeof(float));
 
   int val=0;
-  for(int i=0; i < N; i++){
-    h_array[i]=val++;
+  for(int i=0; i < myarray.N; i++){
+    myarray.h_array[i]=val++;
   }
 
   // HOST TO DEVICE
-  cudaMemcpy(d_array,h_array,N*sizeof(float),cudaMemcpyHostToDevice);
+  cudaMemcpy(myarray.d_array,myarray.h_array,myarray.N*sizeof(float),cudaMemcpyHostToDevice);
 
   int blockSize=256;
-  int numBlocks=(N+blockSize-1)/blockSize;
-  add<<<numBlocks, blockSize>>>(N,d_array);
+  int numBlocks=(myarray.N+blockSize-1)/blockSize;
+  add<<<numBlocks, blockSize>>>(myarray);
 
   // DEVICE TO HOST
-  cudaMemcpy(h_array,d_array,N*sizeof(float),cudaMemcpyDeviceToHost);
+  cudaMemcpy(myarray.h_array,myarray.d_array,myarray.N*sizeof(float),cudaMemcpyDeviceToHost);
 
   for(int i=0; i < 10; i++){
-    cout<<h_array[i]<<" ";
+    cout<<myarray.h_array[i]<<" ";
   }cout<<endl;
 
   return 0;
