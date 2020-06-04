@@ -73,53 +73,40 @@ __device__ void SetElement(array3d &arr, int i_0, int i_1, int i_2, float value)
 }
 
 __global__
-void add(array3d &arr1, array3d &arr2)
+void add(int N,float* d_array)
 {
   int index=blockIdx.x*blockDim.x+threadIdx.x;
   int stride=blockDim.x*gridDim.x;
-  for(int i=index; i < arr1.length; i+=stride){
-
-    // unravel index
-    int _i_ur_0=i/(arr1.size_1*arr1.size_2);
-    int _i_ur_1=(i-(arr1.size_1*arr1.size_2*_i_ur_0))/(arr1.size_2);
-    int _i_ur_2=i%arr1.size_2;
-
-    float e=GetElement(arr1,_i_ur_0,_i_ur_1,_i_ur_2);
-    arr2.d_data[i]=i;
-    // if(_i_ur_1+1<arr2.size_1)
-      // SetElement(arr2,_i_ur_0,_i_ur_1+1,_i_ur_2, e);
-    SetElement(arr2,_i_ur_0,_i_ur_1,_i_ur_2, i);
-
+  for(int i=index; i < N; i+=stride){
+    d_array[i]=2*d_array[i];
   }
 }
 int main(void)
 {
 
-  int N = 3;
-  array3d arr1(N,N,10);
-  array3d arr2(N,N,10);
+  int N=100;
+  float* h_array= new float[N];
+  float* d_array;
+  cudaMalloc(&d_array,N*sizeof(float));
 
-  // initialize x and y arrays on the host
   int val=0;
-  for (int i = 0; i < arr1.length; i++) {
-    arr1.h_data[i] = val++;
-    arr2.h_data[i] = 0.0f;
+  for(int i=0; i < N; i++){
+    h_array[i]=val++;
   }
-  arr1.CopyToDevice();
-  arr2.CopyToDevice();
+
+  // HOST TO DEVICE
+  cudaMemcpy(d_array,h_array,N*sizeof(float),cudaMemcpyHostToDevice);
+
   int blockSize=256;
-  int numBlocks=(N*N+blockSize-1)/blockSize;
-  cout << "numBlocks => " << numBlocks << endl;
-  add<<<numBlocks, blockSize>>>(arr1, arr2);
+  int numBlocks=(N+blockSize-1)/blockSize;
+  add<<<numBlocks, blockSize>>>(N,d_array);
 
-  cudaDeviceSynchronize();
-  arr1.CopyToHost();
-  arr2.CopyToHost();
+  // DEVICE TO HOST
+  cudaMemcpy(h_array,d_array,N*sizeof(float),cudaMemcpyDeviceToHost);
 
-  // Wait for GPU to finish before accessing on host
-  cout<<"arr1:"<<endl;
-  arr1.show();
-  cout<<"arr2:"<<endl;
-  arr2.show();
+  for(int i=0; i < 10; i++){
+    cout<<h_array[i]<<" ";
+  }cout<<endl;
+
   return 0;
 }
