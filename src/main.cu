@@ -28,23 +28,34 @@ struct array3d{
   int size_1;
   int size_2;
   int length;
-  float* data;
+  float* h_data;
+  float* d_data;
   array3d(int size_0,int size_1, int size_2)
     :size_0(size_0),size_1(size_1),size_2(size_2)
   {
     length=size_0*size_1*size_2;
-    cout<<"calling cudaMallocManaged"<<endl;
-    cudaMallocManaged(&data,length*sizeof(float));
+    // allocate memory on device
+    cudaMalloc(&d_data,length*sizeof(float));
+    // allocate memory on host
+    h_data = new float[length];
+    // cudaMallocManaged(&data,length*sizeof(float));
+  }
+  void CopyToHost(){
+    cudaMemcpy(h_data,d_data,length*sizeof(float),cudaMemcpyDeviceToHost);
+  }
+  void CopyToDevice(){
+    cudaMemcpy(d_data,h_data,length*sizeof(float),cudaMemcpyHostToDevice);
   }
   ~array3d(){
-    cudaFree(&data);
+    delete [] h_data;
+    cudaFree(d_data);
   }
   void show(){
     for(int _i0=0; _i0 < size_0; _i0++){
       // printing slice
       for(int _i1=0; _i1 < size_1; _i1++){
         for(int _i2=0; _i2 < size_2; _i2++){
-          cout<<data[_i0*size_1*size_2 + _i1*size_2 + _i2]<<" ";
+          cout<<h_data[_i0*size_1*size_2 + _i1*size_2 + _i2]<<" ";
         }cout<<endl;
       }cout<<"------"<<endl;
     }
@@ -54,15 +65,15 @@ struct array3d{
 __device__
 float GetElement(const array3d &arr, int i_0,int i_1,int i_2)
 {
-  return arr.data[i_0*arr.size_1*arr.size_2 + i_1*arr.size_2 + i_2];
+  return arr.d_data[i_0*arr.size_1*arr.size_2 + i_1*arr.size_2 + i_2];
 }
 __device__ void SetElement(array3d &arr, int i_0, int i_1, int i_2, float value)
 {
-  arr.data[i_0*arr.size_1*arr.size_2 + i_1*arr.size_2 + i_2]=value;
+  arr.d_data[i_0*arr.size_1*arr.size_2 + i_1*arr.size_2 + i_2]=value;
 }
 
 __global__
-void add(array3d arr1, array3d arr2)
+void add(array3d &arr1, array3d &arr2)
 {
   int index=blockIdx.x*blockDim.x+threadIdx.x;
   int stride=blockDim.x*gridDim.x;
@@ -74,9 +85,10 @@ void add(array3d arr1, array3d arr2)
     int _i_ur_2=i%arr1.size_2;
 
     float e=GetElement(arr1,_i_ur_0,_i_ur_1,_i_ur_2);
-
-    if(_i_ur_1+1<arr2.size_1)
-      SetElement(arr2,_i_ur_0,_i_ur_1+1,_i_ur_2, e);
+    arr2.d_data[i]=i;
+    // if(_i_ur_1+1<arr2.size_1)
+      // SetElement(arr2,_i_ur_0,_i_ur_1+1,_i_ur_2, e);
+    SetElement(arr2,_i_ur_0,_i_ur_1,_i_ur_2, i);
 
   }
 }
@@ -90,17 +102,21 @@ int main(void)
   // initialize x and y arrays on the host
   int val=0;
   for (int i = 0; i < arr1.length; i++) {
-    arr1.data[i] = val++;
-    arr2.data[i] = 0.0f;
+    arr1.h_data[i] = val++;
+    arr2.h_data[i] = 0.0f;
   }
-  // Run kernel on 1M elements on the GPU
+  arr1.CopyToDevice();
+  arr2.CopyToDevice();
   int blockSize=256;
   int numBlocks=(N*N+blockSize-1)/blockSize;
   cout << "numBlocks => " << numBlocks << endl;
   add<<<numBlocks, blockSize>>>(arr1, arr2);
 
-  // Wait for GPU to finish before accessing on host
   cudaDeviceSynchronize();
+  arr1.CopyToHost();
+  arr2.CopyToHost();
+
+  // Wait for GPU to finish before accessing on host
   cout<<"arr1:"<<endl;
   arr1.show();
   cout<<"arr2:"<<endl;
