@@ -127,10 +127,10 @@ struct FDTD{
     arr2.CopyToHost();
 
     // Wait for GPU to finish before accessing on host
-    cout<<"arr1:"<<endl;
-    arr1.show();
-    cout<<"arr2:"<<endl;
-    arr2.show();
+    // cout<<"arr1:"<<endl;
+    // arr1.show();
+    // cout<<"arr2:"<<endl;
+    // arr2.show();
   }
   ~FDTD(){
     destruct(arr1);

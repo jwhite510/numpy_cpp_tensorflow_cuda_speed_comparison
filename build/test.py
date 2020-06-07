@@ -4,8 +4,8 @@ import ctypes
 
 if __name__ == "__main__":
     lib=ctypes.cdll.LoadLibrary('libfdtd.so')
-    arr1=np.zeros((3,3,3),dtype=np.float32)
-    arr2=np.zeros((3,3,3),dtype=np.float32)
+    arr1=np.zeros((4,4,4),dtype=np.float32)
+    arr2=np.zeros((4,4,4),dtype=np.float32)
 
     val=0
     for i in range(3):
@@ -24,8 +24,14 @@ if __name__ == "__main__":
             )
     lib.FDTD_run(a)
     print("ran!")
-    arr1+=100
-    lib.FDTD_run(a)
-    print("ran!")
+    print("arr1")
+    print(arr1)
+    print("arr2")
+    print(arr2)
+    # arr1+=100
+    # lib.FDTD_run(a)
+    # print("ran!")
+
+
 
 
