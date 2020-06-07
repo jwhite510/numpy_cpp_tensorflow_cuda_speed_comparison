@@ -8,7 +8,7 @@ extern "C"{
     FDTD*m = new FDTD;
     return (void*)m;
   }
-  void FDTD_runarr1(void*p){
+  void FDTD_run(void*p){
     FDTD*m=(FDTD*)p;
     m->run();
   }

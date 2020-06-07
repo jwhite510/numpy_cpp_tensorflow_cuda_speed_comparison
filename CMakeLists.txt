@@ -15,8 +15,11 @@ set(CUDA_HOST_COMPILER "g++-6")
 find_package(CUDA REQUIRED)
 # add_executable(a.out main.cpp)
 # target_link_libraries(a.out ${OpenCV_LIBS})
-cuda_add_executable(
-	add_cuda
-	src/main.cu
-	)
+# cuda_add_executable(
+# 	add_cuda
+# 	src/main.cu
+# 	)
+
+cuda_add_library( fdtd SHARED src/fdtdwrapper.cu)
+
 
