@@ -98,45 +98,48 @@ void add(array3d arr1, array3d arr2)
 
   }
 }
+
+struct FDTD{
+  array3d arr1;
+  array3d arr2;
+  FDTD(){
+    int N = 3;
+    construct(arr1, N,N,10);
+    construct(arr2, N,N,10);
+
+    // initialize x and y arrays on the host
+    int val=0;
+    for (int i = 0; i < arr1.length; i++) {
+      arr1.h_data[i] = val++;
+      arr2.h_data[i] = 0.0f;
+    }
+  }
+  void run(){
+    arr1.CopyToDevice();
+    arr2.CopyToDevice();
+
+    int blockSize=256;
+    int numBlocks=(arr1.length+blockSize-1)/blockSize;
+    cout << "numBlocks => " << numBlocks << endl;
+    add<<<numBlocks, blockSize>>>(arr1, arr2);
+    arr1.CopyToHost();
+    arr2.CopyToHost();
+
+    // Wait for GPU to finish before accessing on host
+    cout<<"arr1:"<<endl;
+    arr1.show();
+    cout<<"arr2:"<<endl;
+    arr2.show();
+  }
+  ~FDTD(){
+    destruct(arr1);
+    destruct(arr2);
+  }
+};
 int main(void)
 {
+  FDTD fdtd;
+  fdtd.run();
 
-  int N = 3;
-  array3d arr1;
-  construct(arr1, N,N,10);
-  array3d arr2;
-  construct(arr2, N,N,10);
-
-  // initialize x and y arrays on the host
-  int val=0;
-  for (int i = 0; i < arr1.length; i++) {
-    arr1.h_data[i] = val++;
-    arr2.h_data[i] = 0.0f;
-  }
-
-  // ToDevice(arr1);
-  // ToDevice(arr2);
-  arr1.CopyToDevice();
-  arr2.CopyToDevice();
-  int blockSize=256;
-  int numBlocks=(arr1.length+blockSize-1)/blockSize;
-  cout << "numBlocks => " << numBlocks << endl;
-
-  add<<<numBlocks, blockSize>>>(arr1, arr2);
-
-  // copy to host
-  // ToHost(arr1);
-  // ToHost(arr2);
-  arr1.CopyToHost();
-  arr2.CopyToHost();
-
-  // Wait for GPU to finish before accessing on host
-  cout<<"arr1:"<<endl;
-  arr1.show();
-  cout<<"arr2:"<<endl;
-  arr2.show();
-
-  destruct(arr1);
-  destruct(arr2);
   return 0;
 }
