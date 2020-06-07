@@ -48,7 +48,7 @@ struct array3d{
   }
 
 };
-void construct(array3d &arr, int size_0,int size_1, int size_2)
+void construct(array3d &arr, float*data, int size_0,int size_1, int size_2)
 {
   arr.size_0=size_0;
   arr.size_1=size_1;
@@ -57,7 +57,8 @@ void construct(array3d &arr, int size_0,int size_1, int size_2)
   // allocate memory on device
   cudaMalloc(&arr.d_data,arr.length*sizeof(float));
   // allocate memory on host
-  arr.h_data = new float[arr.length];
+  // arr.h_data = new float[arr.length];
+  arr.h_data = data;
 }
 void ToDevice(array3d &arr){
   cudaMemcpy(arr.d_data,arr.h_data,arr.length*sizeof(float),cudaMemcpyHostToDevice);
@@ -93,7 +94,7 @@ void add(array3d arr1, array3d arr2)
 
     float e=GetElement(arr1,_i_ur_0,_i_ur_1,_i_ur_2);
     if(_i_ur_1+1<arr2.size_1)
-      SetElement(arr2,_i_ur_0,_i_ur_1+1,_i_ur_2, e);
+      SetElement(arr2,_i_ur_0,_i_ur_1+1,_i_ur_2, 2*e);
     // SetElement(arr2,_i_ur_0,_i_ur_1,_i_ur_2, i);
 
   }
@@ -102,17 +103,17 @@ void add(array3d arr1, array3d arr2)
 struct FDTD{
   array3d arr1;
   array3d arr2;
-  FDTD(){
-    int N = 3;
-    construct(arr1, N,N,10);
-    construct(arr2, N,N,10);
+  FDTD(int s_0, int s_1, int s_2, float* arr1hostd, float* arr2hostd){
+    // int N = 3;
+    construct(arr1, arr1hostd, s_0,s_1,s_2);
+    construct(arr2, arr2hostd, s_0,s_1,s_2);
 
     // initialize x and y arrays on the host
-    int val=0;
-    for (int i = 0; i < arr1.length; i++) {
-      arr1.h_data[i] = val++;
-      arr2.h_data[i] = 0.0f;
-    }
+    // int val=0;
+    // for (int i = 0; i < arr1.length; i++) {
+      // arr1.h_data[i] = val++;
+      // arr2.h_data[i] = 0.0f;
+    // }
   }
   void run(){
     arr1.CopyToDevice();
